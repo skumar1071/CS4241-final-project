@@ -225,7 +225,7 @@ function createApp(db, authOptions) {
   app.get('/css/bootstrap.min.css', (request, response) => {
     response.sendFile(require.resolve('bootstrap/dist/css/bootstrap.min.css'))
   })
-  app.use(express.static(path.join(__dirname, 'dist')))
+  app.use(express.static(path.join(__dirname, 'public')))
 
   app.use((request, response) => {
     if (
@@ -276,6 +276,7 @@ async function startServer() {
   let server
   try {
     server = app.listen(process.env.PORT || port)
+    console.log("Connected to the server hosting: http://localhost:"+(process.env.PORT || port)+"/login.html");
   } catch {
     await client.close()
     throw new Error('Unable to start HTTP server. Check that PORT is valid and available.')
