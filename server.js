@@ -30,6 +30,18 @@ function parseNumber(value, label) {
   return Number(value)
 }
 
+function parsePositiveInteger(value, label) {
+  const number = parseNumber(value, label)
+  if (!Number.isInteger(number) || number <= 0) {
+    throw invalidInput(`${label} must be a positive integer.`)
+  }
+  return number
+}
+
+function randomInteger(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 function parseId(id) {
   if (typeof id !== 'string' || !/^[a-f\d]{24}$/i.test(id)) {
     throw invalidInput('Invalid record ID.')
@@ -77,6 +89,7 @@ function createApp(db, authOptions) {
   const app = express()
   const characters = db.collection('characters')
   const items = db.collection('items')
+  const enemies = db.collection('enemies')
 
   function parseItem(data) {
     const name = typeof data.name === 'string' ? data.name.trim() : ''
@@ -89,9 +102,33 @@ function createApp(db, authOptions) {
     return { name, description, modifierType, modifier }
   }
 
+  function parseEnemy(data) {
+    const name = typeof data.name === 'string' ? data.name.trim() : ''
+    const description = typeof data.description === 'string' ? data.description.trim() : ''
+    const minHp = parsePositiveInteger(data.minHp, 'Minimum HP')
+    const maxHp = parsePositiveInteger(data.maxHp, 'Maximum HP')
+    const minDamage = parsePositiveInteger(data.minDamage, 'Minimum damage')
+    const maxDamage = parsePositiveInteger(data.maxDamage, 'Maximum damage')
+
+    if (!name || name.length > 100 || description.length > 1000) {
+      throw invalidInput('Enemy name is required (up to 100 characters); description must be at most 1000 characters.')
+    }
+    if (minHp > maxHp) throw invalidInput('Minimum HP must not exceed maximum HP.')
+    if (minDamage > maxDamage) throw invalidInput('Minimum damage must not exceed maximum damage.')
+
+    return { name, description, minHp, maxHp, minDamage, maxDamage }
+  }
+
   async function listItems(ownerId) {
     return (await items.find({ ownerId }).sort({ _id: 1 }).toArray())
       .map(({ _id, name, description, modifierType, modifier}) => ({ id: _id.toHexString(), name, description, modifierType, modifier }))
+  }
+
+  async function listEnemies(ownerId) {
+    return (await enemies.find({ ownerId }).sort({ _id: 1 }).toArray())
+      .map(({ _id, name, description, minHp, maxHp, minDamage, maxDamage }) => ({
+        id: _id.toHexString(), name, description, minHp, maxHp, minDamage, maxDamage
+      }))
   }
 
   async function listCharacters(ownerId) {
@@ -113,7 +150,7 @@ function createApp(db, authOptions) {
   app.use(express.json({ limit: '16kb' }))
   const { requireUser, requireCsrf } = setupAuth(app, db, authOptions)
   app.use(
-    ['/data', '/add', '/update', '/delete', '/hp', '/items', '/equip'],
+    ['/data', '/add', '/update', '/delete', '/hp', '/items', '/enemies', '/equip'],
     requireUser,
     (request, response, next) => {
       response.set('Cache-Control', 'no-store')
@@ -143,6 +180,10 @@ function createApp(db, authOptions) {
     response.json(await listItems(request.user._id))
   })
 
+  app.get('/enemies', async (request, response) => {
+    response.json(await listEnemies(request.user._id))
+  })
+
   app.post('/items/add', requireJsonObject, async (request, response) => {
     await items.insertOne({ ...parseItem(request.body), ownerId: request.user._id })
     response.json(await listItems(request.user._id))
@@ -165,6 +206,43 @@ function createApp(db, authOptions) {
     await characters.updateMany({ ownerId: request.user._id, equippedItemId: _id.toHexString() },
       { $unset: { equippedItemId: '' } })
     response.json(await listItems(request.user._id))
+  })
+
+  app.post('/enemies/add', requireJsonObject, async (request, response) => {
+    await enemies.insertOne({ ...parseEnemy(request.body), ownerId: request.user._id })
+    response.json(await listEnemies(request.user._id))
+  })
+
+  app.post('/enemies/update', requireJsonObject, async (request, response) => {
+    const result = await enemies.updateOne(
+      { _id: parseId(request.body.id), ownerId: request.user._id },
+      { $set: parseEnemy(request.body) }
+    )
+    if (!result.matchedCount) return response.status(404).json({ error: 'Enemy not found.' })
+    response.json(await listEnemies(request.user._id))
+  })
+
+  app.post('/enemies/delete', requireJsonObject, async (request, response) => {
+    const result = await enemies.deleteOne({ _id: parseId(request.body.id), ownerId: request.user._id })
+    if (!result.deletedCount) return response.status(404).json({ error: 'Enemy not found.' })
+    response.json(await listEnemies(request.user._id))
+  })
+
+  app.post('/enemies/spawn', requireJsonObject, async (request, response) => {
+    const enemy = await enemies.findOne({ _id: parseId(request.body.id), ownerId: request.user._id })
+    if (!enemy) return response.status(404).json({ error: 'Enemy not found.' })
+    response.json({
+      id: enemy._id.toHexString(),
+      name: enemy.name,
+      description: enemy.description,
+      hp: randomInteger(enemy.minHp, enemy.maxHp)
+    })
+  })
+
+  app.post('/enemies/roll-damage', requireJsonObject, async (request, response) => {
+    const enemy = await enemies.findOne({ _id: parseId(request.body.id), ownerId: request.user._id })
+    if (!enemy) return response.status(404).json({ error: 'Enemy not found.' })
+    response.json({ id: enemy._id.toHexString(), damage: randomInteger(enemy.minDamage, enemy.maxDamage) })
   })
 
   app.post('/equip', requireJsonObject, async (request, response) => {
@@ -222,7 +300,7 @@ function createApp(db, authOptions) {
     response.json(await listCharacters(request.user._id))
   })
 
-  app.all(['/data', '/add', '/update', '/delete', '/hp', '/items', '/items/add', '/items/update', '/items/delete', '/equip'], (request, response) => {
+  app.all(['/data', '/add', '/update', '/delete', '/hp', '/items', '/items/add', '/items/update', '/items/delete', '/enemies', '/enemies/add', '/enemies/update', '/enemies/delete', '/enemies/spawn', '/enemies/roll-damage', '/equip'], (request, response) => {
     response.status(405).json({ error: 'Method not allowed.' })
   })
 

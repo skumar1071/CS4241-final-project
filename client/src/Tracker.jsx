@@ -3,11 +3,13 @@ import CharacterForm, { emptyCharacter } from './CharacterForm'
 import CharacterTable from './CharacterTable'
 import Feedback from './Feedback'
 import ItemManager from './ItemManager'
+import EnemyManager from './EnemyManager'
 
 export default function Tracker({ api = window.partyApi }) {
   const [user, setUser] = useState(null)
   const [characters, setCharacters] = useState([])
   const [items, setItems] = useState([])
+  const [enemies, setEnemies] = useState([])
   const [draft, setDraft] = useState(emptyCharacter)
   const [editing, setEditing] = useState(null)
   const [busy, setBusy] = useState(true)
@@ -76,7 +78,7 @@ export default function Tracker({ api = window.partyApi }) {
       setCharacters(await api.get('/data'))
 
       setItems(await api.get('/items'))
-
+      setEnemies(await api.get('/enemies'))
       setLoaded(true)
 
       setStatus('Your party is up to date.')
@@ -244,6 +246,49 @@ export default function Tracker({ api = window.partyApi }) {
     }
   }
 
+  async function mutateEnemy(endpoint, body, message) {
+    if (!loaded || retry || !begin('Saving enemy...')) return false
+    try {
+      const updated = await api.post(endpoint, body)
+      setEnemies(updated)
+      setStatus(message)
+      return true
+    } catch (failure) {
+      showError(failure.message)
+      return false
+    } finally {
+      finish()
+    }
+  }
+
+  async function spawnEnemy(id) {
+    if (!loaded || retry || !begin('Spawning enemy...')) return null
+    try {
+      const spawned = await api.post('/enemies/spawn', { id })
+      setStatus('Enemy spawned.')
+      return spawned
+    } catch (failure) {
+      showError(failure.message)
+      return null
+    } finally {
+      finish()
+    }
+  }
+
+  async function rollEnemyDamage(id) {
+    if (!loaded || retry || !begin('Rolling damage...')) return null
+    try {
+      const result = await api.post('/enemies/roll-damage', { id })
+      setStatus('Damage rolled.')
+      return result
+    } catch (failure) {
+      showError(failure.message)
+      return null
+    } finally {
+      finish()
+    }
+  }
+
   function adjustHp(character, direction) {
     if (requestPending.current) return
 
@@ -380,6 +425,22 @@ export default function Tracker({ api = window.partyApi }) {
                   }
               />
 
+              <EnemyManager
+                  enemies={enemies}
+                  disabled={disabled}
+                  onSave={(id, draft) => 
+                      mutateEnemy(
+                          id ? '/enemies/update' : '/enemies/add',
+                          { ...draft, ...(id ? { id } : {}) },
+                          id ? 'Enemy updated.' : 'Enemy created.')}
+                  onDelete={enemy => 
+                      mutateEnemy(
+                          '/enemies/delete',
+                          { id: enemy.id },
+                          'Enemy deleted.')}
+                  onSpawn={spawnEnemy}
+                  onRollDamage={rollEnemyDamage}
+              />
             </div>
         )}
       </>

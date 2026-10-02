@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         '/items': target,
+        '/enemies': target,
         '/equip': target,
         '^/(auth(?:/|$)|data(?:[/?]|$)|add(?:[/?]|$)|update(?:[/?]|$)|delete(?:[/?]|$)|hp(?:[/?]|$))': target,
         '/css/bootstrap.min.css': target,
