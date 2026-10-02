@@ -56,6 +56,7 @@ function parseCharacter(data) {
   const level = parseNumber(data.level, 'Level')
   const currHp = parseNumber(data.currHp, 'Current HP')
   const maxHp = parseNumber(data.maxHp, 'Maximum HP')
+  const equippedItemId = String(data.equippedItemId).trim()
 
   if (!name || !characterClass || !species) {
     throw invalidInput('Name, class, and species are required.')
@@ -79,7 +80,8 @@ function parseCharacter(data) {
     species,
     level,
     currHp,
-    maxHp
+    maxHp,
+    equippedItemId
   }
 }
 
@@ -92,10 +94,12 @@ function createApp(db, authOptions) {
   function parseItem(data) {
     const name = typeof data.name === 'string' ? data.name.trim() : ''
     const description = typeof data.description === 'string' ? data.description.trim() : ''
+    const modifierType = typeof data.modifierType === 'string' ? data.modifierType.trim() : ''
+    const modifier = typeof data.modifier === 'number' ? data.modifier : 0
     if (!name || name.length > 100 || description.length > 1000) {
       throw invalidInput('Item name is required (up to 100 characters); description must be at most 1000 characters.')
     }
-    return { name, description }
+    return { name, description, modifierType, modifier }
   }
 
   function parseEnemy(data) {
@@ -117,7 +121,7 @@ function createApp(db, authOptions) {
 
   async function listItems(ownerId) {
     return (await items.find({ ownerId }).sort({ _id: 1 }).toArray())
-      .map(({ _id, name, description }) => ({ id: _id.toHexString(), name, description }))
+      .map(({ _id, name, description, modifierType, modifier}) => ({ id: _id.toHexString(), name, description, modifierType, modifier }))
   }
 
   async function listEnemies(ownerId) {
@@ -303,7 +307,7 @@ function createApp(db, authOptions) {
   app.get('/css/bootstrap.min.css', (request, response) => {
     response.sendFile(require.resolve('bootstrap/dist/css/bootstrap.min.css'))
   })
-  app.use(express.static(path.join(__dirname, 'public')))
+  app.use(express.static(path.join(__dirname, 'dist')))
 
   app.use((request, response) => {
     if (

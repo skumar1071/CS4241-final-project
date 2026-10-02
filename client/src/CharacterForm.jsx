@@ -1,12 +1,12 @@
 const classes = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']
 const species = ['Aasimar', 'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
 const fields = [
-  { key: 'name', id: 'name', label: 'Name', type: 'text' },
-  { key: 'class', id: 'class', label: 'Class', options: classes },
-  { key: 'species', id: 'species', label: 'Species', options: species },
-  { key: 'level', id: 'level', label: 'Level', type: 'number', min: 1, max: 20 },
-  { key: 'currHp', id: 'curr-hp', label: 'Current HP', type: 'number', min: 0 },
-  { key: 'maxHp', id: 'max-hp', label: 'Maximum HP', type: 'number', min: 1 },
+    { key: 'name', id: 'name', label: 'Name', type: 'text' },
+    { key: 'class', id: 'class', label: 'Class', options: classes },
+    { key: 'species', id: 'species', label: 'Species', options: species },
+    { key: 'level', id: 'level', label: 'Level', type: 'number', min: 1, max: 20 },
+    { key: 'currHp', id: 'curr-hp', label: 'Current HP', type: 'number', min: 0 },
+    { key: 'maxHp', id: 'max-hp', label: 'Maximum HP', type: 'number', min: 1 },
 ]
 
 export const emptyCharacter = () => ({ name: '', class: '', species: '', level: '', currHp: '', maxHp: '' })
