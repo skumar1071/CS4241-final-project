@@ -150,7 +150,7 @@ function createApp(db, authOptions) {
   app.use(express.json({ limit: '16kb' }))
   const { requireUser, requireCsrf } = setupAuth(app, db, authOptions)
   app.use(
-    ['/data', '/add', '/update', '/delete', '/hp', '/items', '/enemies', '/equip'],
+    ['/data', '/add', '/update', '/delete', '/hp', '/items', '/enemies', '/equip', '/campaigns'],
     requireUser,
     (request, response, next) => {
       response.set('Cache-Control', 'no-store')
@@ -171,6 +171,8 @@ function createApp(db, authOptions) {
 
     next()
   }
+
+  require('./campaigns').registerCampaigns(app, db, requireJsonObject)
 
   app.get('/data', async (request, response) => {
     response.json(await listCharacters(request.user._id))

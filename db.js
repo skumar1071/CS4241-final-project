@@ -20,6 +20,7 @@ async function connectDatabase({
     await db.collection('characters').createIndex({ ownerId: 1 })
     await db.collection('items').createIndex({ ownerId: 1 })
     await db.collection('enemies').createIndex({ ownerId: 1 })
+    await db.collection('campaigns').createIndex({ ownerId: 1 })
     await db.collection('sessions').createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
     await db.collection('authAttempts').createIndex({ expires: 1 }, { expireAfterSeconds: 0 })
     return { client, db }
