@@ -121,8 +121,15 @@ export default function Tracker({
     setDraft(emptyCharacter())
   }
 
-  // unequips the current item and equips the requested item and the applies health changes as required
-  async function equipItem(itemId, character) {
+  async function equipItem(itemId, character, campaignId = null) {
+    if (campaignId) {
+      return mutateCampaign('/campaigns/equip', {
+        campaignId,
+        characterId: character.id,
+        itemId: itemId || null
+      })
+    }
+
     if (character.equippedItemId !== null) {
       const equippedItem = items.filter(
         (item) => item.id === character.equippedItemId
@@ -444,6 +451,7 @@ export default function Tracker({
               items={items}
               disabled={disabled}
               onChange={mutateCampaign}
+              onEquip={equipItem}
             />
           ) : (
             <>

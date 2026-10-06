@@ -1,16 +1,19 @@
 ﻿import { useState } from 'react'
 
+// Displays campaigns and their characters, inventories, and equipment controls.
 export default function CampaignManager({
   campaigns,
   characters,
   items,
   disabled,
-  onChange
+  onChange,
+  onEquip
 }) {
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
   const campaign =
     campaigns.find((entry) => entry.id === selected) || campaigns[0]
+  // Creates a campaign, selects it, clears the name after a successful save.
   async function createCampaign(event) {
     event.preventDefault()
     const savedCampaign = await onChange('/campaigns/add', { name })
@@ -20,12 +23,14 @@ export default function CampaignManager({
     }
   }
 
+  // Adds a copy of the selected starting character to the active campaign.
   function addCharacter(event) {
     event.preventDefault()
     const characterId = new FormData(event.currentTarget).get('characterId')
     return onChange('/campaigns/join', { campaignId: campaign.id, characterId })
   }
 
+  // Adds a copy of the chosen item template to this character's inventory.
   function addInventoryItem(event, characterId) {
     event.preventDefault()
     const itemId = new FormData(event.currentTarget).get('itemId')
@@ -36,14 +41,7 @@ export default function CampaignManager({
     })
   }
 
-  function equipItem(characterId, itemId) {
-    return onChange('/campaigns/equip', {
-      campaignId: campaign.id,
-      characterId,
-      itemId: itemId || null
-    })
-  }
-
+  // Removes an inventory copy and unequips it if it was equipped
   function removeInventoryItem(characterId, itemId) {
     return onChange('/campaigns/inventory/remove', {
       campaignId: campaign.id,
@@ -171,7 +169,7 @@ export default function CampaignManager({
                 className="form-select mb-3"
                 disabled={disabled}
                 value={member.equippedItemId || ''}
-                onChange={(event) => equipItem(member.id, event.target.value)}
+                onChange={(event) => onEquip(event.target.value, member, campaign.id)}
               >
                 <option value="">No item</option>
                 {member.inventory.map((item, index) => (
