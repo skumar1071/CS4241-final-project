@@ -4,12 +4,17 @@ import CharacterTable from './CharacterTable'
 import Feedback from './Feedback'
 import ItemManager from './ItemManager'
 import EnemyManager from './EnemyManager'
+import CampaignManager from './CampaignManager'
 
-export default function Tracker({ api = window.partyApi }) {
+export default function Tracker({
+  api = window.partyApi,
+  campaignPage = false
+}) {
   const [user, setUser] = useState(null)
   const [characters, setCharacters] = useState([])
   const [items, setItems] = useState([])
   const [enemies, setEnemies] = useState([])
+  const [campaigns, setCampaigns] = useState([])
   const [draft, setDraft] = useState(emptyCharacter)
   const [editing, setEditing] = useState(null)
   const [busy, setBusy] = useState(true)
@@ -78,10 +83,15 @@ export default function Tracker({ api = window.partyApi }) {
       setCharacters(await api.get('/data'))
 
       setItems(await api.get('/items'))
-      setEnemies(await api.get('/enemies'))
+      if (campaignPage) setCampaigns(await api.get('/campaigns'))
+      else setEnemies(await api.get('/enemies'))
       setLoaded(true)
 
-      setStatus('Your party is up to date.')
+      setStatus(
+        campaignPage
+          ? 'Your campaigns are up to date.'
+          : 'Your party is up to date.'
+      )
     } catch (failure) {
       if (failure.status !== 401) {
         showError(failure.message)
@@ -114,33 +124,54 @@ export default function Tracker({ api = window.partyApi }) {
   // unequips the current item and equips the requested item and the applies health changes as required
   async function equipItem(itemId, character) {
     if (character.equippedItemId !== null) {
-      const equippedItem = items.filter(item => item.id === character.equippedItemId)[0];
-      if (equippedItem.modifierType === 'max_hp' && equippedItem.modifier !== 0) {
-        const newHP = (Number(character.maxHp) - Number(equippedItem.modifier));
-        if (Number(character.currHp) > newHP){
+      const equippedItem = items.filter(
+        (item) => item.id === character.equippedItemId
+      )[0]
+      if (
+        equippedItem.modifierType === 'max_hp' &&
+        equippedItem.modifier !== 0
+      ) {
+        const newHP = Number(character.maxHp) - Number(equippedItem.modifier)
+        if (Number(character.currHp) > newHP) {
           await mutate(
-              "/update",
-              {...character, equippedItemId: itemId || null, currHp: String(newHP), maxHp: String(newHP)},
-              "Updated character's stats after unequipping.",
+            '/update',
+            {
+              ...character,
+              equippedItemId: itemId || null,
+              currHp: String(newHP),
+              maxHp: String(newHP)
+            },
+            "Updated character's stats after unequipping."
           )
-        }else{
+        } else {
           await mutate(
-              "/update",
-              {...character, equippedItemId: itemId || null, maxHp: String(newHP)},
-              "Updated character's stats after unequipping.",
+            '/update',
+            {
+              ...character,
+              equippedItemId: itemId || null,
+              maxHp: String(newHP)
+            },
+            "Updated character's stats after unequipping."
           )
         }
       }
     }
 
     if (itemId !== '') {
-      const equippedItem = items.filter(item => item.id === itemId)[0];
-      if (equippedItem.modifierType === 'max_hp' && equippedItem.modifier !== 0) {
-        console.log("Test "+itemId || null)
+      const equippedItem = items.filter((item) => item.id === itemId)[0]
+      if (
+        equippedItem.modifierType === 'max_hp' &&
+        equippedItem.modifier !== 0
+      ) {
+        console.log('Test ' + itemId || null)
         await mutate(
-            "/update",
-            {...character, equippedItemId: itemId, maxHp: String(character.maxHp + equippedItem.modifier)},
-            "Updated character's stats after equipping.",
+          '/update',
+          {
+            ...character,
+            equippedItemId: itemId,
+            maxHp: String(character.maxHp + equippedItem.modifier)
+          },
+          "Updated character's stats after equipping."
         )
       }
     }
@@ -172,12 +203,12 @@ export default function Tracker({ api = window.partyApi }) {
     setEditing({ id: character.id, name: character.name })
 
     setDraft(
-        Object.fromEntries(
-            Object.keys(emptyCharacter()).map((key) => [
-              key,
-              String(character[key])
-            ])
-        )
+      Object.fromEntries(
+        Object.keys(emptyCharacter()).map((key) => [
+          key,
+          String(character[key])
+        ])
+      )
     )
 
     setError('')
@@ -197,22 +228,17 @@ export default function Tracker({ api = window.partyApi }) {
 
   function save(editingOverride = false) {
     mutate(
-        editing ? '/update' : '/add',
-        editing ? { ...draft, id: editing.id } : draft,
-        editing ? 'Character updated.' : 'Character added.',
-        resetEditor
+      editing ? '/update' : '/add',
+      editing ? { ...draft, id: editing.id } : draft,
+      editing ? 'Character updated.' : 'Character added.',
+      resetEditor
     )
   }
 
   function remove(character) {
-    mutate(
-        '/delete',
-        { id: character.id },
-        'Character deleted.',
-        () => {
-          if (editing?.id === character.id) resetEditor()
-        }
-    )
+    mutate('/delete', { id: character.id }, 'Character deleted.', () => {
+      if (editing?.id === character.id) resetEditor()
+    })
   }
 
   async function mutateItem(endpoint, body, message) {
@@ -223,15 +249,15 @@ export default function Tracker({ api = window.partyApi }) {
 
       setItems(updated)
 
-      setCharacters(current =>
-          current.map(character => ({
-            ...character,
-            equippedItemId: updated.some(
-                item => item.id === character.equippedItemId
-            )
-                ? character.equippedItemId
-                : null
-          }))
+      setCharacters((current) =>
+        current.map((character) => ({
+          ...character,
+          equippedItemId: updated.some(
+            (item) => item.id === character.equippedItemId
+          )
+            ? character.equippedItemId
+            : null
+        }))
       )
 
       setStatus(message)
@@ -256,6 +282,32 @@ export default function Tracker({ api = window.partyApi }) {
     } catch (failure) {
       showError(failure.message)
       return false
+    } finally {
+      finish()
+    }
+  }
+
+  async function mutateCampaign(endpoint, body) {
+    if (!loaded || retry || !begin('Saving campaign...')) return null
+    try {
+      const saved = await api.post(endpoint, body)
+      setCampaigns((current) =>
+        current.some((entry) => entry.id === saved.id)
+          ? current.map((entry) => (entry.id === saved.id ? saved : entry))
+          : [...current, saved]
+      )
+      setStatus('Campaign saved.')
+      return saved
+    } catch (failure) {
+      showError(failure.message)
+      if (failure.status === 409) {
+        try {
+          setCampaigns(await api.get('/campaigns'))
+        } catch {
+          setRetry(true)
+        }
+      }
+      return null
     } finally {
       finish()
     }
@@ -293,7 +345,7 @@ export default function Tracker({ api = window.partyApi }) {
     if (requestPending.current) return
 
     const answer = window.prompt(
-        `${direction > 0 ? 'Add' : 'Subtract'} how much HP for ${character.name}?`
+      `${direction > 0 ? 'Add' : 'Subtract'} how much HP for ${character.name}?`
     )
 
     if (answer === null) return
@@ -306,19 +358,19 @@ export default function Tracker({ api = window.partyApi }) {
     }
 
     mutate(
-        '/hp',
-        { id: character.id, amount: direction * amount },
-        'HP updated.',
-        (updated) => {
-          const saved = updated.find(item => item.id === character.id)
+      '/hp',
+      { id: character.id, amount: direction * amount },
+      'HP updated.',
+      (updated) => {
+        const saved = updated.find((item) => item.id === character.id)
 
-          if (editing?.id === character.id && saved) {
-            setDraft(current => ({
-              ...current,
-              currHp: String(saved.currHp)
-            }))
-          }
+        if (editing?.id === character.id && saved) {
+          setDraft((current) => ({
+            ...current,
+            currHp: String(saved.currHp)
+          }))
         }
+      }
     )
   }
 
@@ -341,108 +393,133 @@ export default function Tracker({ api = window.partyApi }) {
   const disabled = busy || !loaded || retry
 
   return (
-      <>
-        <header className="mb-4">
-          <h1 className="display-5 fw-bold">D&D Party Tracker</h1>
-        </header>
+    <>
+      <header className="mb-4">
+        <h1 className="display-5 fw-bold">D&D Party Tracker</h1>
+      </header>
 
-        <Feedback
-            status={status}
-            error={error}
-            errorRef={errorRef}
-            retry={retry}
-            busy={busy}
-            onRetry={initialize}
-        />
+      <Feedback
+        status={status}
+        error={error}
+        errorRef={errorRef}
+        retry={retry}
+        busy={busy}
+        onRetry={initialize}
+      />
 
-        {user && (
-            <div id="tracker" aria-busy={busy}>
+      {user && (
+        <div id="tracker" aria-busy={busy}>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <p className="mb-0">
+              Signed in as <strong id="username">{user.username}</strong>
+            </p>
 
-              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <button
+              id="logout-button"
+              className="btn btn-outline-dark"
+              type="button"
+              disabled={busy}
+              onClick={logout}
+            >
+              Log out
+            </button>
+          </div>
 
-                <p className="mb-0">
-                  Signed in as <strong id="username">{user.username}</strong>
-                </p>
+          <nav aria-label="Main navigation" className="d-flex gap-3 mb-4">
+            <a href="/" aria-current={!campaignPage ? 'page' : undefined}>
+              Characters, items & enemies
+            </a>
+            <a
+              href="/campaign.html"
+              aria-current={campaignPage ? 'page' : undefined}
+            >
+              Campaigns
+            </a>
+          </nav>
 
-                <button
-                    id="logout-button"
-                    className="btn btn-outline-dark"
-                    type="button"
-                    disabled={busy}
-                    onClick={logout}
-                >
-                  Log out
-                </button>
-              </div>
-
+          {campaignPage ? (
+            <CampaignManager
+              campaigns={campaigns}
+              characters={characters}
+              items={items}
+              disabled={disabled}
+              onChange={mutateCampaign}
+            />
+          ) : (
+            <>
               <CharacterForm
-                  draft={draft}
-                  editing={editing}
-                  disabled={disabled}
-                  onChange={(key, value) =>
-                      setDraft(current => ({
-                        ...current,
-                        [key]: value
-                      }))
-                  }
-                  onSave={save}
-                  onCancel={cancelEdit}
-                  nameRef={nameRef}
-                  submitRef={submitRef}
+                draft={draft}
+                editing={editing}
+                disabled={disabled}
+                onChange={(key, value) =>
+                  setDraft((current) => ({
+                    ...current,
+                    [key]: value
+                  }))
+                }
+                onSave={save}
+                onCancel={cancelEdit}
+                nameRef={nameRef}
+                submitRef={submitRef}
               />
 
               <CharacterTable
-                  characters={characters}
-                  items={items}
-                  loaded={loaded}
-                  disabled={disabled}
-                  onEdit={edit}
-                  onDelete={remove}
-                  onAdjustHp={adjustHp}
-                  onEquip={(character, itemId) => equipItem(itemId, character)
-                  }
+                characters={characters}
+                items={items}
+                loaded={loaded}
+                disabled={disabled}
+                onEdit={edit}
+                onDelete={remove}
+                onAdjustHp={adjustHp}
+                onEquip={(character, itemId) => equipItem(itemId, character)}
               />
 
               <ItemManager
-                  items={items}
-                  disabled={disabled}
-                  onSave={(id, draft) =>
-                      mutateItem(
-                          id ? '/items/update' : '/items/add',
-                          {
-                            ...draft,
-                            ...(id ? { id } : {})
-                          },
-                          id ? 'Item updated.' : 'Item created.'
-                      )
-                  }
-                  onDelete={item =>
-                      mutateItem(
-                          '/items/delete',
-                          { id: item.id },
-                          'Item deleted and unequipped.'
-                      )
-                  }
+                items={items}
+                disabled={disabled}
+                onSave={(id, draft) =>
+                  mutateItem(
+                    id ? '/items/update' : '/items/add',
+                    {
+                      ...draft,
+                      ...(id ? { id } : {})
+                    },
+                    id ? 'Item updated.' : 'Item created.'
+                  )
+                }
+                onDelete={(item) =>
+                  mutateItem(
+                    '/items/delete',
+                    { id: item.id },
+                    'Item deleted and unequipped.'
+                  )
+                }
               />
 
               <EnemyManager
-                  enemies={enemies}
-                  disabled={disabled}
-                  onSave={(id, draft) => 
-                      mutateEnemy(
-                          id ? '/enemies/update' : '/enemies/add',
-                          { ...draft, ...(id ? { id } : {}) },
-                          id ? 'Enemy updated.' : 'Enemy created.')}
-                  onDelete={enemy => 
-                      mutateEnemy(
-                          '/enemies/delete',
-                          { id: enemy.id },
-                          'Enemy deleted.')}
-                  onSpawn={spawnEnemy}
-                  onRollDamage={rollEnemyDamage}
+                enemies={enemies}
+                disabled={disabled}
+                onSave={(id, draft) =>
+                  mutateEnemy(
+                    id ? '/enemies/update' : '/enemies/add',
+                    { ...draft, ...(id ? { id } : {}) },
+                    id ? 'Enemy updated.' : 'Enemy created.'
+                  )
+                }
+                onDelete={(enemy) =>
+                  mutateEnemy(
+                    '/enemies/delete',
+                    { id: enemy.id },
+                    'Enemy deleted.'
+                  )
+                }
+                onSpawn={spawnEnemy}
+                onRollDamage={rollEnemyDamage}
               />
-            </div>
-        )}
-      </>
+            </>
+          )}
+        </div>
+      )}
+    </>
   )
 }

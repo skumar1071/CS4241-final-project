@@ -2,4 +2,6 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import Tracker from './Tracker'
 
-createRoot(document.getElementById('react-root')).render(<Tracker />)
+createRoot(document.getElementById('react-root')).render(
+  <Tracker campaignPage={window.location.pathname === '/campaign.html'} />
+)

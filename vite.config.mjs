@@ -17,16 +17,26 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
+        '/campaigns': target,
         '/items': target,
         '/enemies': target,
         '/equip': target,
-        '^/(auth(?:/|$)|data(?:[/?]|$)|add(?:[/?]|$)|update(?:[/?]|$)|delete(?:[/?]|$)|hp(?:[/?]|$))': target,
-        '/css/bootstrap.min.css': target,
-      },
+        '^/(auth(?:/|$)|data(?:[/?]|$)|add(?:[/?]|$)|update(?:[/?]|$)|delete(?:[/?]|$)|hp(?:[/?]|$))':
+          target,
+        '/css/bootstrap.min.css': target
+      }
     },
     build: {
+      rollupOptions: {
+        input: {
+          main: fileURLToPath(new URL('./client/index.html', import.meta.url)),
+          campaign: fileURLToPath(
+            new URL('./client/campaign.html', import.meta.url)
+          )
+        }
+      },
       outDir: fileURLToPath(new URL('./dist', import.meta.url)),
-      emptyOutDir: true,
-    },
+      emptyOutDir: true
+    }
   }
 })
