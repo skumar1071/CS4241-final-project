@@ -5,7 +5,8 @@ class Car extends React.Component {
             localLootTable: props.lootTable,
             Character : props.character,
             LocalEquippedItems : props.equippedItems,
-            Enemy: props.enemy
+            Enemy: props.enemy,
+            enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp
         };
     }
 
@@ -18,6 +19,10 @@ class Car extends React.Component {
     }
 
     enemyDefeated = () => {
+        return (enemyHp === 0);
+    }
+
+    attackFromEnemy = () => {
 
     }
 
@@ -27,10 +32,6 @@ class Car extends React.Component {
 
     populateCharacter = (character) => {
         this.setState({Character: character});
-    }
-
-    attackFromEnemy = () => {
-
     }
 
     turnAction = (action) => {
