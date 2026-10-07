@@ -2,9 +2,10 @@ class Car extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            updateCharacterHp: props.updateCharacterHp,
             localLootTable: props.lootTable,
-            Character : props.character,
-            LocalEquippedItems : props.equippedItems,
+            Character : null,
+            LocalEquippedItems : null,
             Enemy: props.enemy,
             enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp
         };
@@ -23,7 +24,15 @@ class Car extends React.Component {
     }
 
     attackFromEnemy = () => {
-
+        if (Character !== null) {
+            const dmg = (Math.floor((props.enemy.maxDamage - props.enemy.minDamage) * Math.random() + 1) + props.enemy.minDamage) // TODO: add weapon modifier
+            this.setState({
+                Character: {
+                    ...this.state.Character,
+                    currHp: (this.state.Character.currHp - dmg >= 0)? this.state.Character.currHp - dmg : 0
+                }
+            });
+        }
     }
 
     getDrop = () => {
@@ -35,6 +44,10 @@ class Car extends React.Component {
     }
 
     turnAction = (action) => {
+
+    }
+
+    returnRenderables = () => {
 
     }
 
