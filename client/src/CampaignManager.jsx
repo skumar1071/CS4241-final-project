@@ -9,6 +9,8 @@ export default function CampaignManager({
   onChange,
   onEquip
 }) {
+
+
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
   const campaign =
