@@ -8,9 +8,13 @@ export default class Character extends React.Component {
             localLootTable: props.lootTable,
             Character : null,
             LocalEquippedItems : null,
-            Enemy: props.enemy,
-            enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp
+            Enemy: props.enemy || null,
+            enemyHp: props.enemy
+                ? Math.floor(Math.random() * (props.enemy.maxHp - props.enemy.minHp + 1)) + props.enemy.minHp
+                : 0,
+            isDefending: false
         };
+        this.turnInProgress = false;
     }
 
     attack = () => {
@@ -75,12 +79,33 @@ export default class Character extends React.Component {
         this.setState({Character: character});
     }
 
-    turnAction = (action) => {
+    turnAction = async (action) => {
+        if (action !== 'attack' && action !== 'defend') {
+            throw new RangeError('Action must be "attack" or "defend".');
+        }
+        if (this.turnInProgress) {
+            throw new Error('An encounter turn is already in progress.');
+        }
 
+        this.turnInProgress = true;
+        try {
+            await this[action]();
+            if (!this.enemyDefeated()) await this.attackFromEnemy();
+        } finally {
+            this.turnInProgress = false;
+        }
     }
 
     returnRenderables = () => {
-
+        const { Character, Enemy, enemyHp } = this.state;
+        return {
+            character: Character
+                ? { currHp: Character.currHp, maxHp: Character.maxHp }
+                : null,
+            enemy: Enemy
+                ? { currHp: enemyHp, maxHp: Enemy.maxHp }
+                : null
+        };
     }
 
     render() {
