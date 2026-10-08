@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default class Car extends React.Component {
+export default class Character extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -50,7 +50,7 @@ export default class Car extends React.Component {
     attackFromEnemy = () => {
         return new Promise((resolve) => {
             this.setState((state) => {
-                if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0 || !state.Enemy) {
+                if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0) {
                     return { isDefending: false };
                 }
                 const equipped = state.LocalEquippedItems;
