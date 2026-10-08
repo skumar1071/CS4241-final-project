@@ -13,6 +13,7 @@ export default function CampaignManager({
 
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
+  const [campaignItems, setCampaignItems] = useState(items)
   const campaign =
     campaigns.find((entry) => entry.id === selected) || campaigns[0]
   // Creates a campaign, selects it, clears the name after a successful save.
@@ -23,6 +24,11 @@ export default function CampaignManager({
       setSelected(savedCampaign.id)
       setName('')
     }
+  }
+
+  async function addItems(itemId) {
+    const item = await campaignItems.find((item) => item.id === itemId);
+    setCampaignItems(campaignItems => [...campaignItems, item]);
   }
 
   // Adds a copy of the selected starting character to the active campaign.
@@ -36,6 +42,14 @@ export default function CampaignManager({
   function addInventoryItem(event, characterId) {
     event.preventDefault()
     const itemId = new FormData(event.currentTarget).get('itemId')
+    return onChange('/campaigns/inventory/add', {
+      campaignId: campaign.id,
+      characterId,
+      itemId
+    })
+  }
+
+  function addInventoryItemEncounter(itemId, characterId) {
     return onChange('/campaigns/inventory/add', {
       campaignId: campaign.id,
       characterId,
