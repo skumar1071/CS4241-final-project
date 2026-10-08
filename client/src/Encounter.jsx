@@ -1,4 +1,6 @@
-class Car extends React.Component {
+import React from 'react';
+
+export default class Car extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -6,33 +8,67 @@ class Car extends React.Component {
             localLootTable: props.lootTable,
             Character : null,
             LocalEquippedItems : null,
-            Enemy: props.enemy,
-            enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp
+            Enemy: props.enemy || null,
+            enemyHp: props.enemy
+                ? Math.floor(Math.random() * (props.enemy.maxHp - props.enemy.minHp + 1)) + props.enemy.minHp
+                : 0,
+            isDefending: false
         };
+        this.turnInProgress = false;
     }
 
     attack = () => {
-
+        return new Promise((resolve) => {
+            this.setState((state) => {
+                if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0) {
+                    return { isDefending: false };
+                }
+                const equipped = state.LocalEquippedItems;
+                const items = Array.isArray(equipped) ? equipped : equipped ? [equipped] : [];
+                const bonus = items.reduce((total, item) => {
+                    return item?.modifierType === 'dmg_given' && Number.isFinite(item.modifier)
+                        ? total + Math.max(0, item.modifier) : total;
+                }, 0);
+                const damage = Math.floor(Math.random() * 6) + 1 + bonus;
+                return { enemyHp: Math.max(0, state.enemyHp - damage), isDefending: false };
+            }, resolve);
+        });
     }
 
     defend = () => {
-
+        return new Promise((resolve) => {
+            this.setState((state) => ({
+                isDefending: Boolean(state.Character && state.Character.currHp > 0 && state.enemyHp > 0)
+            }), resolve);
+        });
     }
 
     enemyDefeated = () => {
-        return (enemyHp === 0);
+        return this.state.enemyHp <= 0;
     }
 
     attackFromEnemy = () => {
-        if (Character !== null) {
-            const dmg = (Math.floor((props.enemy.maxDamage - props.enemy.minDamage) * Math.random() + 1) + props.enemy.minDamage) // TODO: add weapon modifier
-            this.setState({
-                Character: {
-                    ...this.state.Character,
-                    currHp: (this.state.Character.currHp - dmg >= 0)? this.state.Character.currHp - dmg : 0
+        return new Promise((resolve) => {
+            this.setState((state) => {
+                if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0 || !state.Enemy) {
+                    return { isDefending: false };
                 }
-            });
-        }
+                const equipped = state.LocalEquippedItems;
+                const items = Array.isArray(equipped) ? equipped : equipped ? [equipped] : [];
+                const reduction = items.reduce((total, item) => {
+                    return item?.modifierType === 'dmg_reduction' && Number.isFinite(item.modifier)
+                        ? total + Math.max(0, item.modifier) : total;
+                }, 0);
+                const { minDamage, maxDamage } = state.Enemy;
+                const roll = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+                const damage = Math.max(0, roll - reduction);
+                const receivedDamage = state.isDefending ? Math.ceil(damage / 2) : damage;
+                return {
+                    Character: { ...state.Character, currHp: Math.max(0, state.Character.currHp - receivedDamage) },
+                    isDefending: false
+                };
+            }, resolve);
+        });
     }
 
     getDrop = () => {
@@ -43,12 +79,33 @@ class Car extends React.Component {
         this.setState({Character: character});
     }
 
-    turnAction = (action) => {
+    turnAction = async (action) => {
+        if (action !== 'attack' && action !== 'defend') {
+            throw new RangeError('Action must be "attack" or "defend".');
+        }
+        if (this.turnInProgress) {
+            throw new Error('An encounter turn is already in progress.');
+        }
 
+        this.turnInProgress = true;
+        try {
+            await this[action]();
+            if (!this.enemyDefeated()) await this.attackFromEnemy();
+        } finally {
+            this.turnInProgress = false;
+        }
     }
 
     returnRenderables = () => {
-
+        const { Character, Enemy, enemyHp } = this.state;
+        return {
+            character: Character
+                ? { currHp: Character.currHp, maxHp: Character.maxHp }
+                : null,
+            enemy: Enemy
+                ? { currHp: enemyHp, maxHp: Enemy.maxHp }
+                : null
+        };
     }
 
     render() {
