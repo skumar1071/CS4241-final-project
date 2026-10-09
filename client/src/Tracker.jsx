@@ -121,11 +121,11 @@ export default function Tracker({
     setDraft(emptyCharacter())
   }
 
-  async function equipItem(itemId, character, campaignId = null) {
+  async function equipItem(itemId, characterId, campaignId = null) {
     if (campaignId) {
       return mutateCampaign('/campaigns/equip', {
         campaignId,
-        characterId: character.id,
+        characterId: characterId,
         itemId: itemId || null
       })
     }

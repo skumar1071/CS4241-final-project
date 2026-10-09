@@ -1,18 +1,18 @@
 import React from 'react';
 
-export default class Character extends React.Component {
+export default class Encounter extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             updateCharacterHp: props.updateCharacterHp,
+            // this is a list of items
             localLootTable: props.lootTable,
             Character : null,
-            LocalEquippedItems : null,
-            Enemy: props.enemy || null,
-            enemyHp: props.enemy
-                ? Math.floor(Math.random() * (props.enemy.maxHp - props.enemy.minHp + 1)) + props.enemy.minHp
-                : 0,
-            isDefending: false
+            LocalEquippedItem : null,
+            Enemy: props.enemy,
+            enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp,
+            addItem: props.addItem,
+            isDefending: false,
         };
         this.turnInProgress = false;
     }
@@ -23,12 +23,19 @@ export default class Character extends React.Component {
                 if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0) {
                     return { isDefending: false };
                 }
-                const equipped = state.LocalEquippedItems;
-                const items = Array.isArray(equipped) ? equipped : equipped ? [equipped] : [];
-                const bonus = items.reduce((total, item) => {
-                    return item?.modifierType === 'dmg_given' && Number.isFinite(item.modifier)
-                        ? total + Math.max(0, item.modifier) : total;
-                }, 0);
+                const equipped = state.LocalEquippedItem;
+                //const items = Array.isArray(equipped) ? equipped : equipped ? [equipped] : [];
+                const hpBonus = equipped => {
+                    return equipped?.modifierType === 'healing' && Number.isFinite(equipped.modifier)
+                        ? Math.max(0, equipped.modifier) : 0;
+                };
+                if (!state.Character.currHp <= 0 && !state.enemyHp <= 0) {
+                    return { Character: {...Character, hp: Number(Character.hp)+hpBonus } };
+                }
+                const bonus = equipped => {
+                    return equipped?.modifierType === 'dmg_given' && Number.isFinite(equipped.modifier)
+                        ? Math.max(0, equipped.modifier) : 0;
+                };
                 const damage = Math.floor(Math.random() * 6) + 1 + bonus;
                 return { enemyHp: Math.max(0, state.enemyHp - damage), isDefending: false };
             }, resolve);
@@ -47,18 +54,24 @@ export default class Character extends React.Component {
         return this.state.enemyHp <= 0;
     }
 
+    equip = (itemId) => {
+        const hpBonus = (item) => {
+            return item?.modifierType === 'max_hp' && Number.isFinite(item.modifier)
+                ? Math.max(0, item.modifier) : 0;
+        };
+    }
+
     attackFromEnemy = () => {
         return new Promise((resolve) => {
             this.setState((state) => {
                 if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0) {
                     return { isDefending: false };
                 }
-                const equipped = state.LocalEquippedItems;
-                const items = Array.isArray(equipped) ? equipped : equipped ? [equipped] : [];
-                const reduction = items.reduce((total, item) => {
-                    return item?.modifierType === 'dmg_reduction' && Number.isFinite(item.modifier)
-                        ? total + Math.max(0, item.modifier) : total;
-                }, 0);
+                const equipped = state.LocalEquippedItem;
+                const reduction = equipped => {
+                    return equipped?.modifierType === 'dmg_reduction' && Number.isFinite(equipped.modifier)
+                        ? Math.max(0, equipped.modifier) : 0;
+                };
                 const { minDamage, maxDamage } = state.Enemy;
                 const roll = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
                 const damage = Math.max(0, roll - reduction);
@@ -72,7 +85,18 @@ export default class Character extends React.Component {
     }
 
     getDrop = () => {
+        const dropped = Math.random() >= 0.3;
+        if (dropped){
+            const randomItem = this.state.localLootTable[Math.floor(Math.random()*this.state.localLootTable.length)];
+            this.state.addItem(randomItem, this.state.Character.id);
+        }
+    }
 
+    equipItem = () => {
+        const reduction = equipped => {
+            return equipped?.modifierType === 'dmg_reduction' && Number.isFinite(equipped.modifier)
+                ? Math.max(0, equipped.modifier) : 0;
+        };
     }
 
     populateCharacter = (character) => {

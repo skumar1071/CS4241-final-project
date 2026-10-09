@@ -43,6 +43,14 @@ export default function CampaignManager({
     })
   }
 
+  function addInventoryItemEncounter(itemId, characterId) {
+    return onChange('/campaigns/inventory/add', {
+      campaignId: campaign.id,
+      characterId,
+      itemId
+    })
+  }
+
   // Removes an inventory copy and unequips it if it was equipped
   function removeInventoryItem(characterId, itemId) {
     return onChange('/campaigns/inventory/remove', {
@@ -50,6 +58,10 @@ export default function CampaignManager({
       characterId,
       itemId
     })
+  }
+
+  function equipItem(itemId, characterId, campaignId) {
+    onEquip(itemId, characterId, campaignId);
   }
 
   const availableCharacters = characters.filter(
@@ -171,7 +183,7 @@ export default function CampaignManager({
                 className="form-select mb-3"
                 disabled={disabled}
                 value={member.equippedItemId || ''}
-                onChange={(event) => onEquip(event.target.value, member, campaign.id)}
+                onChange={(event) => equipItem(event.target.value, member.id, campaign.id)}
               >
                 <option value="">No item</option>
                 {member.inventory.map((item, index) => (

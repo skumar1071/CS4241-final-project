@@ -151,7 +151,22 @@ function registerCampaigns(app, db, requireJsonObject) {
         !campaignCharacter.inventory.some((item) => item.id === itemId)
       )
         throwRequestError('Item is not in this character’s campaign inventory.')
-      campaignCharacter.equippedItemId = itemId
+        const currentItem =
+            campaignCharacter.inventory.find(
+                (item) => item.id === campaignCharacter.equippedItemId
+            ) ?? null;
+        const equippedItem = campaignCharacter.inventory.find(
+            (item) => item.id === itemId
+        ) ?? null;
+        const currentExtraHp = (
+            currentItem?.modifierType === 'max_hp' && Number.isFinite(currentItem.modifier)
+                ? Math.max(0, currentItem.modifier) : 0);
+        const extraHp = (
+            equippedItem?.modifierType === 'max_hp' && Number.isFinite(equippedItem.modifier)
+                ? Math.max(0, equippedItem.modifier) : 0);
+        const hpDiff = extraHp-currentExtraHp;
+        campaignCharacter.baseMaxHp = campaignCharacter.baseMaxHp + hpDiff;
+        campaignCharacter.equippedItemId = itemId
     })
   )
 
