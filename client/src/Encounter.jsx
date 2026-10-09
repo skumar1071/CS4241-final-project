@@ -66,7 +66,9 @@ export default class Encounter extends React.Component {
                 if (!state.Character || state.Character.currHp <= 0 || state.enemyHp <= 0) {
                     return { isDefending: false };
                 }
-                const equipped = state.LocalEquippedItem;
+                const equipped = state.Character.inventory.find((item) => {
+                    return item.id === state.Character.equippedItemId;
+                }) ?? null;
                 const reduction = equipped => {
                     return equipped?.modifierType === 'dmg_reduction' && Number.isFinite(equipped.modifier)
                         ? Math.max(0, equipped.modifier) : 0;
@@ -89,13 +91,6 @@ export default class Encounter extends React.Component {
             const randomItem = this.state.localLootTable[Math.floor(Math.random()*this.state.localLootTable.length)];
             this.state.addItem(randomItem, this.state.Character.id);
         }
-    }
-
-    equipItem = () => {
-        const reduction = equipped => {
-            return equipped?.modifierType === 'dmg_reduction' && Number.isFinite(equipped.modifier)
-                ? Math.max(0, equipped.modifier) : 0;
-        };
     }
 
     populateCharacter = (character) => {
