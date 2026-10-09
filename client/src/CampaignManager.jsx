@@ -13,7 +13,6 @@ export default function CampaignManager({
 
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
-  const [campaignItems, setCampaignItems] = useState(items)
   const campaign =
     campaigns.find((entry) => entry.id === selected) || campaigns[0]
   // Creates a campaign, selects it, clears the name after a successful save.
@@ -24,11 +23,6 @@ export default function CampaignManager({
       setSelected(savedCampaign.id)
       setName('')
     }
-  }
-
-  async function addItems(itemId) {
-    const item = await characters.find((item) => item.id === itemId);
-    setCampaignItems(campaignItems => [...campaignItems, item]);
   }
 
   // Adds a copy of the selected starting character to the active campaign.
@@ -67,24 +61,6 @@ export default function CampaignManager({
   }
 
   function equipItem(itemId, characterId, campaignId) {
-    const currentCharacter = characters.find((character) => character.id === characterId);
-    const currentItem = items.find((item) => item.id === currentCharacter.equippedItemId)
-    const equippedItem = items.find((item) => item.id === itemId)
-    if (currentItem !== undefined) {
-      const currentExtraHp = (
-          currentItem?.modifierType === 'max_hp' && Number.isFinite(currentItem.modifier)
-            ? Math.max(0, currentItem.modifier) : 0);
-      const extraHp = (
-          equippedItem?.modifierType === 'max_hp' && Number.isFinite(equippedItem.modifier)
-              ? Math.max(0, equippedItem.modifier) : 0);
-      const hpDiff = extraHp-currentExtraHp;
-      currentCharacter.maxHp = currentCharacter.maxHp + hpDiff;
-    }else{
-      const extraHp = (
-          equippedItem?.modifierType === 'max_hp' && Number.isFinite(equippedItem.modifier)
-              ? Math.max(0, equippedItem.modifier) : 0);
-      currentCharacter.maxHp = currentCharacter.maxHp + extraHp;
-    }
     onEquip(itemId, characterId, campaignId);
   }
 
