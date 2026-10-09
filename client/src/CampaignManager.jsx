@@ -27,7 +27,7 @@ export default function CampaignManager({
   }
 
   async function addItems(itemId) {
-    const item = await campaignItems.find((item) => item.id === itemId);
+    const item = await characters.find((item) => item.id === itemId);
     setCampaignItems(campaignItems => [...campaignItems, item]);
   }
 
@@ -64,6 +64,28 @@ export default function CampaignManager({
       characterId,
       itemId
     })
+  }
+
+  function equipItem(itemId, characterId, campaignId) {
+    const currentCharacter = characters.find((character) => character.id === characterId);
+    const currentItem = items.find((item) => item.id === currentCharacter.equippedItemId)
+    const equippedItem = items.find((item) => item.id === itemId)
+    if (currentItem !== undefined) {
+      const currentExtraHp = (
+          currentItem?.modifierType === 'max_hp' && Number.isFinite(currentItem.modifier)
+            ? Math.max(0, currentItem.modifier) : 0);
+      const extraHp = (
+          equippedItem?.modifierType === 'max_hp' && Number.isFinite(equippedItem.modifier)
+              ? Math.max(0, equippedItem.modifier) : 0);
+      const hpDiff = extraHp-currentExtraHp;
+      currentCharacter.maxHp = currentCharacter.maxHp + hpDiff;
+    }else{
+      const extraHp = (
+          equippedItem?.modifierType === 'max_hp' && Number.isFinite(equippedItem.modifier)
+              ? Math.max(0, equippedItem.modifier) : 0);
+      currentCharacter.maxHp = currentCharacter.maxHp + extraHp;
+    }
+    onEquip(itemId, characterId, campaignId);
   }
 
   const availableCharacters = characters.filter(
@@ -185,7 +207,7 @@ export default function CampaignManager({
                 className="form-select mb-3"
                 disabled={disabled}
                 value={member.equippedItemId || ''}
-                onChange={(event) => onEquip(event.target.value, member, campaign.id)}
+                onChange={(event) => equipItem(event.target.value, member.id, campaign.id)}
               >
                 <option value="">No item</option>
                 {member.inventory.map((item, index) => (
