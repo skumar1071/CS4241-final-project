@@ -13,9 +13,8 @@ export default class Encounter extends React.Component {
             enemyHp: Math.floor((props.enemy.maxHp - props.enemy.minHp) * Math.random() + 1) + props.enemy.minHp,
             addItem: props.addItem,
             isDefending: false,
-            // keep check on this to make sure that the encounter stops when they are dead
-            isDead: false,
         };
+        this.turnInProgress = false;
     }
 
     attack = () => {
@@ -104,12 +103,33 @@ export default class Encounter extends React.Component {
         this.setState({Character: character});
     }
 
-    turnAction = (action) => {
+    turnAction = async (action) => {
+        if (action !== 'attack' && action !== 'defend') {
+            throw new RangeError('Action must be "attack" or "defend".');
+        }
+        if (this.turnInProgress) {
+            throw new Error('An encounter turn is already in progress.');
+        }
 
+        this.turnInProgress = true;
+        try {
+            await this[action]();
+            if (!this.enemyDefeated()) await this.attackFromEnemy();
+        } finally {
+            this.turnInProgress = false;
+        }
     }
 
     returnRenderables = () => {
-
+        const { Character, Enemy, enemyHp } = this.state;
+        return {
+            character: Character
+                ? { currHp: Character.currHp, maxHp: Character.maxHp }
+                : null,
+            enemy: Enemy
+                ? { currHp: enemyHp, maxHp: Enemy.maxHp }
+                : null
+        };
     }
 
     render() {
